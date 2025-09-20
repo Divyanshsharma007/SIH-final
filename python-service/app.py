@@ -8,6 +8,8 @@ import sys
 import logging
 from typing import List, Optional
 import numpy as np
+import joblib
+model = joblib.load("models/catboost-model.pkl")
 
 # Configure logging
 logging.basicConfig(
@@ -40,46 +42,30 @@ model_metadata = {}
 def load_model():
     global model, model_metadata
     try:
-        # Try multiple possible model paths
-        possible_paths = [
-            os.path.join('models', 'catboost-model.pkl'),
-            os.path.join('..', 'models', 'catboost-model.pkl'),
-            os.path.join(os.path.dirname(__file__), 'models', 'catboost-model.pkl'),
-            os.path.join(os.path.dirname(__file__), '..', 'models', 'catboost-model.pkl'),
-            'catboost-model.pkl',  # Current directory
-            os.path.join('python-service', 'models', 'catboost-model.pkl')
-        ]
-        
-        model_path = None
-        for path in possible_paths:
-            if os.path.exists(path):
-                model_path = path
-                break
-        
-        if not model_path:
-            raise FileNotFoundError(f"Model file not found in any of the searched paths: {possible_paths}")
-        
+        # Build the path relative to this file (app.py)
+        model_path = os.path.join(os.path.dirname(__file__), "models", "catboost-model.pkl")
+
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"❌ Model file not found at: {model_path}")
+
         logger.info(f"Loading model from: {model_path}")
         model = joblib.load(model_path)
-        
-        # Extract model metadata if available
-        if hasattr(model, 'classes_'):
-            model_metadata['classes'] = model.classes_.tolist()
+
+        # Extract model metadata
+        if hasattr(model, "classes_"):
+            model_metadata["classes"] = model.classes_.tolist()
             logger.info(f"Model classes: {model_metadata['classes']}")
-        if hasattr(model, 'n_features_in_'):
-            model_metadata['n_features'] = model.n_features_in_
+        if hasattr(model, "n_features_in_"):
+            model_metadata["n_features"] = model.n_features_in_
             logger.info(f"Model features: {model_metadata['n_features']}")
-            
-        # Try to get feature names from the model
-        if hasattr(model, 'feature_names_'):
-            model_metadata['feature_names'] = model.feature_names_
+        if hasattr(model, "feature_names_"):
+            model_metadata["feature_names"] = model.feature_names_
             logger.info(f"Model feature names: {model.feature_names_}")
-        
-        # Debug categorical features
+
         debug_model_features()
-        
         logger.info("✅ Model loaded successfully")
-        
+        print("✅ Model loaded. Feature names:", model.feature_names_)
+
     except Exception as e:
         logger.error(f"❌ Error loading model: {str(e)}")
         model = None
@@ -129,35 +115,28 @@ class UserData(BaseModel):
         return v
 
 class PredictionRequest(BaseModel):
-    # Updated to match your unified dataset features
-    age: float = Field(..., ge=15, le=100, description="Student age")
-    gender: str = Field(..., description="Gender: M, F, or O")
-    nationality: int = Field(..., description="Nationality code")
-    highschool_score: float = Field(..., ge=0, le=100, description="High school score (0-100)")
-    entrance_exam_score_normalized: float = Field(..., ge=0, le=100, description="Entrance exam score normalized (0-100)")
-    department: Optional[int] = Field(None, description="Department code")
-    admission_type: Optional[int] = Field(None, description="Admission type code")
-    attendance_pct: Optional[float] = Field(None, ge=0, le=100, description="Attendance percentage")
-    current_sem_cgpa: float = Field(..., ge=0, le=10, description="Current semester CGPA (0-10)")
-    aggregate_cgpa: float = Field(..., ge=0, le=10, description="Aggregate CGPA (0-10)")
-    backlogs_count: Optional[int] = Field(None, ge=0, description="Number of backlogs")
-    family_income_bracket: Optional[int] = Field(None, description="Family income bracket")
-    parent_education: int = Field(..., description="Highest parent education level")
-    scholarship_status: Optional[str] = Field(None, description="Scholarship status: none, scholarship")
-    fee_payment_status: Optional[str] = Field(None, description="Fee payment status: on_time, delayed")
-    residence_type: Optional[str] = Field(None, description="Residence type: day_scholar, hostel")
-    commute_distance_km: Optional[float] = Field(None, ge=0, description="Commute distance in km")
-    # Missing flags for dataset-specific columns
-    department_missing: int = Field(0, ge=0, le=1, description="Department missing flag")
-    admission_type_missing: int = Field(0, ge=0, le=1, description="Admission type missing flag")
-    backlogs_count_missing: int = Field(0, ge=0, le=1, description="Backlogs count missing flag")
-    scholarship_status_missing: int = Field(0, ge=0, le=1, description="Scholarship status missing flag")
-    fee_payment_status_missing: int = Field(0, ge=0, le=1, description="Fee payment status missing flag")
-    residence_type_missing: int = Field(0, ge=0, le=1, description="Residence type missing flag")
-    family_income_bracket_missing: int = Field(1, ge=0, le=1, description="Family income bracket missing flag")
-    commute_distance_km_missing: int = Field(1, ge=0, le=1, description="Commute distance missing flag")
+    age: float = Field(..., ge=15, le=100)
+    gender: str = Field(..., description="M, F, O")
+    nationality: int = Field(...)
+    highschool_score: float = Field(..., ge=0, le=100)
+    entrance_exam_score_normalized: float = Field(..., ge=0, le=100)
+    department: Optional[int] = None
+    admission_type: Optional[int] = None
+    family_income_bracket: Optional[int] = None
+    parent_education: int = Field(...)
+    scholarship_status: Optional[str] = None
+    residence_type: Optional[str] = None
+    commute_distance_km: Optional[float] = None
+    department_missing: int = Field(0, ge=0, le=1)
+    admission_type_missing: int = Field(0, ge=0, le=1)
+    backlogs_count_missing: int = Field(0, ge=0, le=1)
+    scholarship_status_missing: int = Field(0, ge=0, le=1)
+    fee_payment_status_missing: int = Field(0, ge=0, le=1)
+    residence_type_missing: int = Field(0, ge=0, le=1)
+    family_income_bracket_missing: int = Field(1, ge=0, le=1)
+    commute_distance_km_missing: int = Field(1, ge=0, le=1)
     
-    userData: Optional[UserData] = Field(None, description="Optional user information")
+    userData: Optional[UserData] = None
 
     @validator('gender')
     def validate_gender(cls, v):
@@ -169,12 +148,6 @@ class PredictionRequest(BaseModel):
     def validate_scholarship(cls, v):
         if v is not None and v not in ["none", "scholarship"]:
             raise ValueError('scholarship_status must be one of: "none", "scholarship"')
-        return v
-
-    @validator('fee_payment_status')
-    def validate_fee_status(cls, v):
-        if v is not None and v not in ["on_time", "delayed"]:
-            raise ValueError('fee_payment_status must be one of: "on_time", "delayed"')
         return v
 
     @validator('residence_type')
@@ -189,15 +162,18 @@ class BatchPredictionRequest(BaseModel):
 # Health check endpoint
 @app.get("/health")
 async def health_check():
+    feature_names = model_metadata.get('feature_names', [])
     status = 'OK' if model is not None else 'ERROR'
     return {
         'status': status,
         'model_loaded': model is not None,
-        'model_features': model_metadata.get('n_features', 'unknown'),
+        'model_features': len(feature_names),   # number of features
+        'model_feature_names': feature_names,   # list of feature names
         'model_classes': model_metadata.get('classes', 'unknown'),
         'categorical_features': model_metadata.get('categorical_features', 'unknown'),
         'service': 'Student Dropout Prediction API'
     }
+
 
 # Model info endpoint
 @app.get("/model-info")
@@ -231,28 +207,18 @@ async def model_info():
 
 # Get the correct feature names based on your unified dataset
 def get_feature_names():
-    # If model has feature names, use them
-    if 'feature_names' in model_metadata:
+    """Return the exact feature names expected by the loaded model."""
+    if model_metadata.get('feature_names'):
         return model_metadata['feature_names']
     
-    # Feature names from your unified dataset
-    feature_names = [
-        'age', 'gender', 'nationality', 'highschool_score', 
-        'entrance_exam_score_normalized', 'department', 'admission_type',
-        'attendance_pct', 'current_sem_cgpa', 'aggregate_cgpa', 
-        'backlogs_count', 'family_income_bracket', 'parent_education',
-        'scholarship_status', 'fee_payment_status', 'residence_type', 
-        'commute_distance_km', 'department_missing', 'admission_type_missing',
-        'backlogs_count_missing', 'scholarship_status_missing', 
-        'fee_payment_status_missing', 'residence_type_missing',
-        'family_income_bracket_missing', 'commute_distance_km_missing'
-    ]
-    return feature_names
+    # Fallback: if model has n_features_in_ but no names, generate generic names
+    if hasattr(model, 'n_features_in_'):
+        return [f'feature_{i}' for i in range(model.n_features_in_)]
+    
+    raise ValueError("Model feature names not available. Cannot create DataFrame for prediction.")
+
 
 def prepare_features(data: PredictionRequest):
-    """Convert PredictionRequest to feature array"""
-    
-    # Handle None values and create feature array
     features = [
         data.age,
         data.gender,
@@ -261,14 +227,9 @@ def prepare_features(data: PredictionRequest):
         data.entrance_exam_score_normalized,
         data.department if data.department is not None else np.nan,
         data.admission_type if data.admission_type is not None else np.nan,
-        data.attendance_pct if data.attendance_pct is not None else np.nan,
-        data.current_sem_cgpa,
-        data.aggregate_cgpa,
-        data.backlogs_count if data.backlogs_count is not None else np.nan,
         data.family_income_bracket if data.family_income_bracket is not None else np.nan,
         data.parent_education,
         data.scholarship_status if data.scholarship_status is not None else np.nan,
-        data.fee_payment_status if data.fee_payment_status is not None else np.nan,
         data.residence_type if data.residence_type is not None else np.nan,
         data.commute_distance_km if data.commute_distance_km is not None else np.nan,
         data.department_missing,
@@ -280,7 +241,6 @@ def prepare_features(data: PredictionRequest):
         data.family_income_bracket_missing,
         data.commute_distance_km_missing
     ]
-    
     return features
 
 # Single prediction endpoint
@@ -336,6 +296,9 @@ async def predict(data: PredictionRequest):
         
         # Create DataFrame with correct feature names
         df = pd.DataFrame([processed_features], columns=feature_names)
+
+        expected_cols = model_metadata.get('feature_names', [])
+        df = df[expected_cols]
         
         logger.info(f"DataFrame shape: {df.shape}")
         logger.info(f"DataFrame columns: {list(df.columns)}")
@@ -452,7 +415,10 @@ async def batch_predict(batch_data: BatchPredictionRequest):
             user_data_list.append(pred_request.userData)
 
         # Create DataFrame for batch prediction
-        df = pd.DataFrame(all_features, columns=feature_names)
+        df = pd.DataFrame(all_features, columns=get_feature_names())
+        expected_cols = model_metadata.get('feature_names', [])
+        df = df[expected_cols]
+
         
         # Make batch predictions
         try:
@@ -528,6 +494,6 @@ if __name__ == "__main__":
     uvicorn.run(
         app, 
         host="0.0.0.0", 
-        port=5000,
+        port=5001,
         log_level="info"
     )

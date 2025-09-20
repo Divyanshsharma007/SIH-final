@@ -3,7 +3,7 @@ const axios = require("axios");
 class PredictionModel {
   constructor() {
     this.pythonServiceUrl =
-      process.env.PYTHON_SERVICE_URL || "http://localhost:5000";
+      process.env.PYTHON_SERVICE_URL || "http://localhost:5001";
     this.timeout = 10000; // 10 second timeout
   }
 

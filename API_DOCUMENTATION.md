@@ -4,7 +4,7 @@
 This API provides machine learning-based predictions for student dropout risk using a CatBoost model. The system consists of a Node.js backend that interfaces with a Python FastAPI service for ML predictions.
 
 **Base URL**: `http://localhost:3000` (Node.js Backend)  
-**Python Service URL**: `http://localhost:5000` (FastAPI Service)
+**Python Service URL**: `http://localhost:5001` (FastAPI Service)
 
 ---
 
@@ -34,14 +34,14 @@ This API provides machine learning-based predictions for student dropout risk us
 | `GET` | `/api/history/:id` | `http://localhost:3000/api/history/:id` | Get specific prediction | By database ID |
 | `GET` | `/api/history/stats/summary` | `http://localhost:3000/api/history/stats/summary` | Prediction statistics | Counts and percentages |
 
-### Python Service Routes (`http://localhost:5000`)
+### Python Service Routes (`http://localhost:5001`)
 
 | Method | Endpoint | Full URL | Description | Key Features |
 |--------|----------|----------|-------------|--------------|
-| `GET` | `/health` | `http://localhost:5000/health` | Service health check | Model status + metadata |
-| `GET` | `/model-info` | `http://localhost:5000/model-info` | Detailed model info | CatBoost classifier details |
-| `POST` | `/predict` | `http://localhost:5000/predict` | Single ML prediction | Direct model access |
-| `POST` | `/batch-predict` | `http://localhost:5000/batch-predict` | Batch ML predictions | Up to 100 predictions |
+| `GET` | `/health` | `http://localhost:5001/health` | Service health check | Model status + metadata |
+| `GET` | `/model-info` | `http://localhost:5001/model-info` | Detailed model info | CatBoost classifier details |
+| `POST` | `/predict` | `http://localhost:5001/predict` | Single ML prediction | Direct model access |
+| `POST` | `/batch-predict` | `http://localhost:5001/batch-predict` | Batch ML predictions | Up to 100 predictions |
 
 ### Quick Reference
 
